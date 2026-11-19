@@ -1,5 +1,5 @@
 /* ==========================================================================
-   L'Inspiration – Fleuriste | Interactions & Horaires temps réel
+   L'Inspiration – Fleuriste | Interactions, Carrousel & Horaires temps réel
    ========================================================================== */
 
 (() => {
@@ -166,7 +166,62 @@
     });
   }
 
-  /* 3. Filtres de galerie & Lightbox accessible
+  /* 3. Carrousel horizontal des créations récentes (fb_images)
+     ---------------------------------------------------------------------- */
+  const carouselTrack = document.getElementById("fb-carousel-track");
+  const carouselPrev = document.getElementById("fb-carousel-prev");
+  const carouselNext = document.getElementById("fb-carousel-next");
+  const carouselBar = document.getElementById("fb-carousel-bar");
+  const carouselCounter = document.getElementById("fb-carousel-counter");
+
+  if (carouselTrack) {
+    const slides = Array.from(carouselTrack.querySelectorAll(".carousel-slide"));
+
+    function getStepSize() {
+      const first = slides[0];
+      if (!first) return 300;
+      const gap = parseFloat(getComputedStyle(carouselTrack).columnGap || getComputedStyle(carouselTrack).gap || "20");
+      return first.getBoundingClientRect().width + gap;
+    }
+
+    function updateCarouselUI() {
+      const maxScroll = Math.max(0, carouselTrack.scrollWidth - carouselTrack.clientWidth);
+      const scrollLeft = carouselTrack.scrollLeft;
+
+      if (carouselPrev) carouselPrev.disabled = scrollLeft <= 4;
+      if (carouselNext) carouselNext.disabled = scrollLeft >= maxScroll - 4;
+
+      if (carouselBar) {
+        const minPct = Math.min(100, (carouselTrack.clientWidth / carouselTrack.scrollWidth) * 100);
+        const pct = maxScroll > 0 ? minPct + ((100 - minPct) * (scrollLeft / maxScroll)) : 100;
+        carouselBar.style.width = `${Math.min(100, Math.max(minPct, pct))}%`;
+      }
+
+      if (carouselCounter && slides.length) {
+        const step = getStepSize();
+        const currentSlide = Math.min(slides.length, Math.max(1, Math.round(scrollLeft / step) + 1));
+        carouselCounter.textContent = `${currentSlide} / ${slides.length}`;
+      }
+    }
+
+    if (carouselPrev) {
+      carouselPrev.addEventListener("click", () => {
+        carouselTrack.scrollBy({ left: -getStepSize(), behavior: "smooth" });
+      });
+    }
+
+    if (carouselNext) {
+      carouselNext.addEventListener("click", () => {
+        carouselTrack.scrollBy({ left: getStepSize(), behavior: "smooth" });
+      });
+    }
+
+    carouselTrack.addEventListener("scroll", updateCarouselUI, { passive: true });
+    window.addEventListener("resize", updateCarouselUI);
+    updateCarouselUI();
+  }
+
+  /* 4. Filtres de galerie & Lightbox multi-groupes accessible
      ---------------------------------------------------------------------- */
   const filterButtons = Array.from(document.querySelectorAll(".filter-btn"));
   const galleryCards = Array.from(document.querySelectorAll(".gallery-card"));
@@ -190,7 +245,9 @@
     });
   }
 
-  if (lightbox && galleryCards.length) {
+  const lightboxItems = Array.from(document.querySelectorAll("[data-lightbox-group]"));
+
+  if (lightbox && lightboxItems.length) {
     const lbImg = document.getElementById("lightbox-img");
     const lbCaption = document.getElementById("lightbox-caption");
     const lbCounter = document.getElementById("lightbox-counter");
@@ -202,15 +259,17 @@
     let currentIndex = 0;
     let lastFocused = null;
 
-    function getVisibleCards() {
-      return galleryCards.filter((card) => !card.classList.contains("is-hidden"));
+    function getGroupItems(groupName) {
+      return lightboxItems.filter(
+        (item) => item.dataset.lightboxGroup === groupName && !item.classList.contains("is-hidden")
+      );
     }
 
     function renderLightbox() {
-      const card = activeItems[currentIndex];
-      if (!card) return;
-      const img = card.querySelector("img");
-      const title = card.dataset.title || img?.alt || "";
+      const item = activeItems[currentIndex];
+      if (!item) return;
+      const img = item.querySelector("img");
+      const title = item.dataset.title || img?.alt || "";
 
       if (lbImg && img) {
         lbImg.src = img.getAttribute("src");
@@ -220,9 +279,9 @@
       if (lbCounter) lbCounter.textContent = `${currentIndex + 1} / ${activeItems.length}`;
     }
 
-    function openLightbox(card) {
-      activeItems = getVisibleCards();
-      currentIndex = Math.max(0, activeItems.indexOf(card));
+    function openLightbox(item) {
+      activeItems = getGroupItems(item.dataset.lightboxGroup);
+      currentIndex = Math.max(0, activeItems.indexOf(item));
       lastFocused = document.activeElement;
       renderLightbox();
       lightbox.classList.add("is-open");
@@ -247,10 +306,10 @@
       renderLightbox();
     }
 
-    galleryCards.forEach((card) => {
-      const trigger = card.querySelector(".gallery-card__trigger");
+    lightboxItems.forEach((item) => {
+      const trigger = item.querySelector("button");
       if (trigger) {
-        trigger.addEventListener("click", () => openLightbox(card));
+        trigger.addEventListener("click", () => openLightbox(item));
       }
     });
 
@@ -270,7 +329,7 @@
     });
   }
 
-  /* 4. Bouton Copier l'IBAN (avec fallback pour ouverture locale file://)
+  /* 5. Bouton Copier l'IBAN (avec fallback pour ouverture locale file://)
      ---------------------------------------------------------------------- */
   document.querySelectorAll(".js-copy-iban").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -315,7 +374,7 @@
     });
   });
 
-  /* 5. Apparition douce au scroll
+  /* 6. Apparition douce au scroll
      ---------------------------------------------------------------------- */
   const reveals = document.querySelectorAll(".reveal");
   if ("IntersectionObserver" in window && reveals.length) {
