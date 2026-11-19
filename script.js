@@ -57,7 +57,6 @@
     const { dayIndex, minutes } = getBrusselsNow();
     const today = SCHEDULE[dayIndex];
 
-    // Vérifier si ouvert actuellement
     for (const [start, end] of today.slots) {
       if (minutes >= start && minutes < end) {
         return {
@@ -70,7 +69,6 @@
       }
     }
 
-    // Vérifier si réouverture plus tard aujourd'hui
     for (const [start] of today.slots) {
       if (minutes < start) {
         return {
@@ -83,7 +81,6 @@
       }
     }
 
-    // Chercher le prochain jour d'ouverture
     for (let offset = 1; offset <= 7; offset++) {
       const nextDayIndex = (dayIndex + offset) % 7;
       const nextDay = SCHEDULE[nextDayIndex];
@@ -331,7 +328,7 @@
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -30px 0px" }
+      { threshold: 0.1, rootMargin: "0px 0px -30px 0px" }
     );
     reveals.forEach((el) => observer.observe(el));
   } else {
